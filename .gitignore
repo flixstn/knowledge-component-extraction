@@ -1,0 +1,4 @@
+/target
+/weights/*
+/src/run.sh
+/video
