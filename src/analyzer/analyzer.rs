@@ -1,4 +1,4 @@
-use std::{process::Command, str::from_utf8, fs::write, error::Error};
+use std::{process::Command, str::from_utf8, fs::write, error::Error, env::current_dir};
 use indexmap::IndexSet;
 use serde::{Serialize, Deserialize};
 
@@ -24,7 +24,7 @@ impl VideoAnalyzer {
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         self.download()?;
         let mut parser = Parser::new();
-        Yolo::run(&mut parser)?;
+        Yolo::run(&mut parser, &self.video.path)?;
 
         self.knowledge_components = parser.knowledge_components;
 
@@ -46,14 +46,17 @@ impl VideoAnalyzer {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Video {
-    title: String,
-    url: String,
+    pub title: String,
+    pub url: String,
+    #[serde(skip)]
+    pub path: String
 }
 
 impl Video {
     fn new(url: &str) -> Self {
         let command_output = Command::new("youtube-dl").args(&["--get-title", &url]).output().expect("Error: youtube-dl could not get video title.");
         let mut video_title = from_utf8(&command_output.stdout).unwrap().to_owned();
+        let path = format!("{}/video/{}.mp4", current_dir().unwrap().display().to_string(), video_title);
 
         if video_title.ends_with("\n") {
             video_title.pop();
@@ -61,7 +64,8 @@ impl Video {
 
         Self {
             title: video_title,
-            url: url.into()
+            url: url.into(),
+            path: path
         }
     }
 }

@@ -14,10 +14,10 @@ use std::error::Error;
 pub struct Yolo;
 
 impl Yolo {
-    pub fn run(parser: &mut Parser) -> Result<(), Box<dyn Error>>{
+    pub fn run(parser: &mut Parser, file: &str) -> Result<(), Box<dyn Error>>{
         // initialize video capture 
         let mut video_capture = VideoCapture::from_file(
-            &"/home/flix/dev/MA/knowledge-component-extraction/video/Zeiger Teil 1: Was sind Zeiger Teil 1.mp4", 
+            file, 
             videoio::CAP_ANY
         )?;
         
