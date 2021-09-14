@@ -2,3 +2,4 @@
 /weights/*
 /src/run.sh
 /video
+/src/classifier/classifier
