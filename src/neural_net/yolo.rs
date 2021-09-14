@@ -1,4 +1,4 @@
-use crate::parser::parser::Parser;
+use crate::parser::Parser;
 use opencv::{
     core::{BORDER_DEFAULT, CV_32F, Point, Range, Rect, Scalar, Size, min_max_loc, no_array, subtract}, 
     dnn::{self, DNN_BACKEND_OPENCV, DNN_TARGET_CPU, Net, nms_boxes, read_net_from_darknet}, 
@@ -14,7 +14,7 @@ use std::error::Error;
 pub struct Yolo;
 
 impl Yolo {
-    pub fn run(parser: &mut Parser, file: &str) -> Result<(), Box<dyn Error>>{
+    pub fn run<P: Parser>(parser: &mut P, file: &str) -> Result<(), Box<dyn Error>>{
         // initialize video capture 
         let mut video_capture = VideoCapture::from_file(
             file, 
@@ -72,7 +72,7 @@ impl Yolo {
 
             // delay processing and only take one frame every second
             if frame_id % multiplier == 1 {
-                println!("{:?}", frame_position);
+                // println!("{:?}", frame_position);
                 // generate a blob from frame
                 dnn::blob_from_image_to(
                     &img, &mut blob, 
@@ -180,8 +180,8 @@ impl Yolo {
 
                 // perform OCR on image
                 if !gray.empty()? {
-                    ocr_output = ocr.run(&src, 0, 1)?;
-                    parser.parse(&ocr_output, "www.google.de/",frame_position)?;
+                    ocr_output = ocr.run(&src, 0, 1)?;  // component level should be 0?
+                    parser.parse(&ocr_output, frame_position)?;
                 }
 
                 // show frame
