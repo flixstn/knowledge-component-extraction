@@ -1,8 +1,10 @@
+#![allow(unused)]
 use analyzer::analyzer::VideoAnalyzer;
 use clap::{App, Arg};
 use std::error::Error;
 
 mod analyzer;
+mod classifier;
 mod lexer;
 mod neural_net;
 mod parser;
@@ -15,6 +17,7 @@ fn main() {
 }
 
 fn try_main() -> Result<(), Box<dyn Error>> {
+    // TODO: add playlist parameter
     // argument parsing
     let matches = App::new("Knowledge Component Extraction")
         .version("0.1.0")
