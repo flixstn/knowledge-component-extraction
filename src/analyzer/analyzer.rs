@@ -2,7 +2,7 @@ use std::{process::Command, str::from_utf8, fs::write, error::Error, env::curren
 use indexmap::IndexSet;
 use serde::{Serialize, Deserialize};
 
-use crate::{neural_net::yolo::Yolo, parser::{parser::Parser, knowledge_component::KnowledgeComponent}};
+use crate::{classifier::classifier::{LanguageClassifier, ProgrammingLanguage}, neural_net::yolo::Yolo, parser::{cjparser::CJParser, knowledge_component::KnowledgeComponent, pyparser::PyParser}};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VideoAnalyzer {
@@ -23,10 +23,39 @@ impl VideoAnalyzer {
 
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         self.download()?;
-        let mut parser = Parser::new();
-        Yolo::run(&mut parser, &self.video.path)?;
+        if let Some(language) = LanguageClassifier::classify(&self.video.title) {
+            match language {
+                ProgrammingLanguage::C => {
+                    let mut parser = CJParser::new(&self.video.url);
+                    Yolo::run(&mut parser, &self.video.path)?;
 
-        self.knowledge_components = parser.knowledge_components;
+                    self.knowledge_components = parser.knowledge_components;
+                }
+                ProgrammingLanguage::Cpp => {
+                    let mut parser = CJParser::new(&self.video.url);
+                    Yolo::run(&mut parser, &self.video.path)?;
+
+                    self.knowledge_components = parser.knowledge_components;
+                }
+                ProgrammingLanguage::Java => {
+                    let mut parser = CJParser::new(&self.video.url);
+                    Yolo::run(&mut parser, &self.video.path)?;
+
+                    self.knowledge_components = parser.knowledge_components;
+                }
+                ProgrammingLanguage::Python => {
+                    let mut parser = PyParser::new(&self.video.url);
+                    Yolo::run(&mut parser, &self.video.path)?;
+
+                    self.knowledge_components = parser.knowledge_components;
+                }
+            }
+        } else {
+            // let mut parser = CJParser::new(&self.video.url);
+            // Yolo::run(&mut parser, &self.video.path)?;
+
+            // self.knowledge_components = parser.knowledge_components;
+        }
 
         Ok(())
     }
