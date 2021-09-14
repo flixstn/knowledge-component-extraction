@@ -1,5 +1,6 @@
 use crate::{
     lexer::pylexer::Token,
+    parser::Parser,
     parser::knowledge_component::{KnowledgeComponent, Component},
 };
 use indexmap::IndexSet;
@@ -9,21 +10,25 @@ use std::error::Error;
 
 #[derive(Serialize, Deserialize)]
 pub struct PyParser {
+    pub source: String,
     pub knowledge_components: IndexSet<KnowledgeComponent>,
 }
 
 impl PyParser {
-    pub fn new() -> Self {
+    pub fn new(source: &str) -> Self {
         Self {
+            source: source.into(),
             knowledge_components: IndexSet::new(),
         }
     }
+}
 
-    pub fn parse(&mut self, file: &str, url: &str, time_code: i32) -> Result<(), Box<dyn Error>> {
+impl Parser for PyParser {
+    fn parse(&mut self, file: &str, time_code: i32) -> Result<(), Box<dyn Error>> {
         let tokens: Vec<_> = Token::lexer(&file).collect();
         let components = &mut self.knowledge_components;
         let mut token_iter = tokens.iter().enumerate();
-        let time_stamp = format!("{}&t={}", url, time_code);
+        let time_stamp = format!("{}&t={}", self.source, time_code);
 
         while let Some((idx, token)) = token_iter.next() {
             match token {
@@ -359,6 +364,7 @@ impl PyParser {
         Ok(())
     }
 }
+
 
 fn parse_float(token: &Token) -> Component {
     let token = Component::new(token, None);
