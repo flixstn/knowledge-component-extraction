@@ -3,6 +3,7 @@ use std::{process::Command, str::from_utf8};
 pub struct LanguageClassifier;
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum ProgrammingLanguage {
     C,
     Cpp,
@@ -27,12 +28,18 @@ impl LanguageClassifier {
         return None
     }
 
-    pub fn classify_ml(val: &str) {
+    pub fn classify_ml(val: &str) -> Option<ProgrammingLanguage> {
         let mut output = Command::new("./src/classifier/classifier").args(&[&format!("{}", val)]).output().unwrap();
         let language = from_utf8(&output.stdout).unwrap();
 
-        println!("{}", language);
+        if "c_cpp" == language {
+            return Some(ProgrammingLanguage::Cpp);
+        }else if "java" == language {
+            return Some (ProgrammingLanguage::Java);
+        } else if "python" == language {
+            return Some(ProgrammingLanguage::Python);
+        }
+
+        None
     }
-
-
 }
