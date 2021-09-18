@@ -1,4 +1,3 @@
-use crate::parser::Parser;
 use opencv::{
     core::{BORDER_DEFAULT, CV_32F, Point, Range, Rect, Scalar, Size, min_max_loc, no_array, subtract}, 
     dnn::{self, DNN_BACKEND_OPENCV, DNN_TARGET_CPU, Net, nms_boxes, read_net_from_darknet}, 
@@ -9,12 +8,12 @@ use opencv::{
     types::{VectorOfMat, VectorOfRect, VectorOfString, VectorOff32, VectorOfi32}, 
     videoio::{self, CAP_PROP_FPS, CAP_PROP_POS_MSEC, VideoCapture, VideoCaptureTrait}
 };
-use std::error::Error;
+use std::{error::Error, sync::mpsc::Sender};
 
 pub struct Yolo;
 
 impl Yolo {
-    pub fn run<P: Parser>(parser: &mut P, file: &str) -> Result<(), Box<dyn Error>>{
+    pub fn run(sender: Sender<(String, i32)>, file: &str) -> Result<(), Box<dyn Error>>{
         // initialize video capture 
         let mut video_capture = VideoCapture::from_file(
             file, 
@@ -180,8 +179,10 @@ impl Yolo {
 
                 // perform OCR on image
                 if !gray.empty()? {
-                    ocr_output = ocr.run(&src, 0, 1)?;  // component level should be 0?
-                    parser.parse(&ocr_output, frame_position)?;
+                    // TODO: change component level to default: 0?
+                    ocr_output = ocr.run(&src, 0, 1)?;
+                    sender.send((ocr_output, frame_position));
+                    // parser.parse(&ocr_output, frame_position)?;
                 }
 
                 // show frame
