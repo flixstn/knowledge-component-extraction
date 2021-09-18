@@ -3,6 +3,7 @@ use serde::{Serialize, Deserialize};
 use std::hash::Hash;
 
 #[derive(Logos, Debug, Clone, Serialize, Deserialize, Eq, Ord, Hash, PartialEq, PartialOrd)]
+#[non_exhaustive]
 pub enum Token {
     // preprocessor
     #[regex(r"#define|#undef|#ifdef|#ifndef|#if|#endif|#else|#elif|#line|#error|#include|#pragma", to_string)]
