@@ -1,5 +1,5 @@
 use crate::{
-    lexer::lexer::Token,
+    lexer::cjlexer::Token,
     parser::Parser,
     parser::knowledge_component::{KnowledgeComponent, Component},
 };
@@ -785,6 +785,10 @@ impl Parser for CJParser {
         }
         
         Ok(())
+    }
+
+    fn get_knowledge_components(&mut self) -> IndexSet<KnowledgeComponent> {
+        self.knowledge_components.clone()
     }
 }
 

@@ -8,7 +8,7 @@ use logos::Logos;
 use serde::{Serialize, Deserialize};
 use std::error::Error;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PyParser {
     pub source: String,
     pub knowledge_components: IndexSet<KnowledgeComponent>,
@@ -23,7 +23,7 @@ impl PyParser {
     }
 }
 
-impl Parser for PyParser {
+impl Parser for PyParser { 
     fn parse(&mut self, file: &str, time_code: i32) -> Result<(), Box<dyn Error>> {
         let tokens: Vec<_> = Token::lexer(&file).collect();
         let components = &mut self.knowledge_components;
@@ -362,6 +362,10 @@ impl Parser for PyParser {
             }
         }
         Ok(())
+    }
+
+    fn get_knowledge_components(&mut self) -> IndexSet<KnowledgeComponent> {
+        self.knowledge_components.clone()
     }
 }
 
