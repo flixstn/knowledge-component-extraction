@@ -1,8 +1,14 @@
-use std::{process::Command, str::from_utf8, fs::write, error::Error, env::current_dir};
+use crate::{
+    classifier::classifier::LanguageClassifier, 
+    neural_net::yolo::Yolo, 
+    parser::{ProtoParser, knowledge_component::KnowledgeComponent}
+};
+use std::{env::current_dir, error::Error, fs::write, process::Command, str::from_utf8, sync::{Arc, Mutex, mpsc}, thread, time::Duration};
 use indexmap::IndexSet;
 use serde::{Serialize, Deserialize};
 
-use crate::{classifier::classifier::{LanguageClassifier, ProgrammingLanguage}, neural_net::yolo::Yolo, parser::{cjparser::CJParser, knowledge_component::KnowledgeComponent, pyparser::PyParser}};
+
+const CLASSIFICATIONTHRESHOLD: usize = 8;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VideoAnalyzer {
@@ -23,40 +29,51 @@ impl VideoAnalyzer {
 
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         self.download()?;
-        if let Some(language) = LanguageClassifier::classify(&self.video.title) {
-            match language {
-                ProgrammingLanguage::C => {
-                    let mut parser = CJParser::new(&self.video.url);
-                    Yolo::run(&mut parser, &self.video.path)?;
+        let (sender, receiver) = mpsc::channel::<(String, i32)>();
+        let url = self.video.url.clone();
 
-                    self.knowledge_components = parser.knowledge_components;
-                }
-                ProgrammingLanguage::Cpp => {
-                    let mut parser = CJParser::new(&self.video.url);
-                    Yolo::run(&mut parser, &self.video.path)?;
-
-                    self.knowledge_components = parser.knowledge_components;
-                }
-                ProgrammingLanguage::Java => {
-                    let mut parser = CJParser::new(&self.video.url);
-                    Yolo::run(&mut parser, &self.video.path)?;
-
-                    self.knowledge_components = parser.knowledge_components;
-                }
-                ProgrammingLanguage::Python => {
-                    let mut parser = PyParser::new(&self.video.url);
-                    Yolo::run(&mut parser, &self.video.path)?;
-
-                    self.knowledge_components = parser.knowledge_components;
-                }
+        let mut parser = Arc::new(Mutex::new(ProtoParser::new_empty()));
+        let mut parser_clone = parser.clone();
+        
+        // TODO implement break condition
+        let handle = thread::spawn(move || {
+            // let mut parser = ProtoParser::new_empty();
+            if let Some(classification) = LanguageClassifier::classify(&url) {
+                    // let mut parser = ProtoParser::new(&url, classification);
+                    parser_clone.lock().unwrap().new(&url, classification);
+                    loop {
+                        let (value, time_code) = receiver.recv().unwrap();
+                        // parser.parse(&value, time_code).unwrap();
+                        parser_clone.lock().unwrap().parse(&value, time_code).unwrap();
+                    }
             }
-        } else {
-            // let mut parser = CJParser::new(&self.video.url);
-            // Yolo::run(&mut parser, &self.video.path)?;
+            else {
+                let mut classification_string = String::new();
+                let mut classify = true;
+                loop {
+                    let (value, time_code) = receiver.recv().unwrap();
+                    if classify {
+                        classification_string.push_str(&value);
+                        if classification_string.chars().count() >= CLASSIFICATIONTHRESHOLD {
+                            if let Some(classification) = LanguageClassifier::classify_ml(&value) {
+                                // parser = ProtoParser::new(&url, classification);
+                                parser_clone.lock().unwrap().new(&url, classification);
+                            }
+                            classify = false;
+                        }
+                    }
+                    // parser.parse(&value, time_code).unwrap();
+                    parser_clone.lock().unwrap().parse(&value, time_code).unwrap();
+                    thread::sleep(Duration::from_millis(500));
+                }
+            }    
+        });
 
-            // self.knowledge_components = parser.knowledge_components;
-        }
+        Yolo::run(sender, &self.video.path)?;
 
+        // TODO: implement transfer of knowledge components
+        // Arc::try_unwrap(parser).unwrap().into_inner().unwrap();
+        // Arc::try_unwrap(parser).unwrap().into_inner().unwrap().parser.unwrap().get_knowledge_components();
         Ok(())
     }
 
