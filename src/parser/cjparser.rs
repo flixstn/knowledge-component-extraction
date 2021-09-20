@@ -787,7 +787,7 @@ impl Parser for CJParser {
         Ok(())
     }
 
-    fn get_knowledge_components(&mut self) -> IndexSet<KnowledgeComponent> {
+    fn get_knowledge_components(&self) -> IndexSet<KnowledgeComponent> {
         self.knowledge_components.clone()
     }
 }
