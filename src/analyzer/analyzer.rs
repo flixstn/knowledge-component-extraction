@@ -32,7 +32,7 @@ impl VideoAnalyzer {
         let (sender, receiver) = mpsc::channel::<(String, i32)>();
         let url = self.video.url.clone();
 
-        let mut parser = Arc::new(Mutex::new(ProtoParser::new_empty()));
+        let mut parser = Arc::new(Mutex::new(ProtoParser::new()));
         let mut parser_clone = parser.clone();
         
         // TODO implement break condition
@@ -40,7 +40,7 @@ impl VideoAnalyzer {
             // let mut parser = ProtoParser::new_empty();
             if let Some(classification) = LanguageClassifier::classify(&url) {
                     // let mut parser = ProtoParser::new(&url, classification);
-                    parser_clone.lock().unwrap().new(&url, classification);
+                    parser_clone.lock().unwrap().parse_language(&url, classification);
                     loop {
                         let (value, time_code) = receiver.recv().unwrap();
                         // parser.parse(&value, time_code).unwrap();
@@ -51,13 +51,14 @@ impl VideoAnalyzer {
                 let mut classification_string = String::new();
                 let mut classify = true;
                 loop {
+                    // TODO: wrap unwrap
                     let (value, time_code) = receiver.recv().unwrap();
                     if classify {
                         classification_string.push_str(&value);
                         if classification_string.chars().count() >= CLASSIFICATIONTHRESHOLD {
                             if let Some(classification) = LanguageClassifier::classify_ml(&value) {
                                 // parser = ProtoParser::new(&url, classification);
-                                parser_clone.lock().unwrap().new(&url, classification);
+                                parser_clone.lock().unwrap().parse_language(&url, classification);
                             }
                             classify = false;
                         }
@@ -72,7 +73,8 @@ impl VideoAnalyzer {
         Yolo::run(sender, &self.video.path)?;
 
         // TODO: implement transfer of knowledge components
-        // Arc::try_unwrap(parser).unwrap().into_inner().unwrap();
+        handle.join();
+        self.knowledge_components = Arc::try_unwrap(parser).unwrap().into_inner().unwrap().get_knowledge_components();
         // Arc::try_unwrap(parser).unwrap().into_inner().unwrap().parser.unwrap().get_knowledge_components();
         Ok(())
     }
