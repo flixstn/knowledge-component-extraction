@@ -71,7 +71,6 @@ impl Yolo {
 
             // delay processing and only take one frame every second
             if frame_id % multiplier == 1 {
-                // println!("{:?}", frame_position);
                 // generate a blob from frame
                 dnn::blob_from_image_to(
                     &img, &mut blob, 
@@ -182,7 +181,6 @@ impl Yolo {
                     // TODO: change component level to default: 0?
                     ocr_output = ocr.run(&src, 0, 1)?;
                     sender.send((ocr_output, frame_position));
-                    // parser.parse(&ocr_output, frame_position)?;
                 }
 
                 // show frame
