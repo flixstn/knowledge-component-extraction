@@ -16,27 +16,30 @@ pub struct ProtoParser {
 }
 
 impl ProtoParser {
-    pub fn new_empty() -> Self {
+    pub fn new() -> Self {
         Self {
             parser: None,
         }
     }
-    pub fn new(&mut self, source: &str, language: ProgrammingLanguage) {
+    pub fn parse_language(&mut self, source: &str, language: ProgrammingLanguage) {
         match language {
             ProgrammingLanguage::C => {
                 let parser = CJParser::new(source);
                 self.parser = Some(Box::new(parser))
-                // Self {
-                //     parser: Some(Box::new(parser))
-                // }
             }
-            _ => {
+            ProgrammingLanguage::Cpp => {
                 let parser = CJParser::new(source);
                 self.parser = Some(Box::new(parser))
-                // Self {
-                //     parser: Some(Box::new(parser))
-                // }
             }
+            ProgrammingLanguage::Java => {
+                let parser = CJParser::new(source);
+                self.parser = Some(Box::new(parser))
+            }
+            ProgrammingLanguage::Python => {
+                let parser = PyParser::new(source);
+                self.parser = Some(Box::new(parser))
+            }
+            _ => {}
         }
     }
 
@@ -49,12 +52,12 @@ impl ProtoParser {
         Ok(())
     }
 
-    // pub fn get_knowledge_components(&self) -> IndexSet<KnowledgeComponent> {
-    //     self.parser.unwrap().get_knowledge_components()
-    // }
+    pub fn get_knowledge_components(&self) -> IndexSet<KnowledgeComponent> {
+        self.parser.as_ref().unwrap().get_knowledge_components()
+    }
 }
 
 pub trait Parser: std::fmt::Debug + Send {
     fn parse(&mut self, file: &str, time_code: i32) -> Result<(), Box<dyn Error>>;
-    fn get_knowledge_components(&mut self) -> IndexSet<KnowledgeComponent>;
+    fn get_knowledge_components(&self) -> IndexSet<KnowledgeComponent>;
 }
