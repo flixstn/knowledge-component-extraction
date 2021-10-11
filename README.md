@@ -1,10 +1,10 @@
 # Knowledge Component Extraction
 
-<p align="justify" markdown=1>
+<div align="justify" markdown=1>
  This project aims to provide an application to extract, process and represent knowledge components from videos, particularly programming video tutorials. It locates presented source code in videos and uses the subframe for further processing resulting in a knowledge component tree representing all pre defined knowledge components. Processed videos can be categorized and suggested to learners based on their current objectives.
 The source code is available to everyone under the MIT licence and you are very welcome to clone or fork the reposity, but keep in mind that this repository is mostly a proof-of-concept and the code is hardly optimized or refined.
 Batteries not included: the trained `Classifier` to detect the programming languge and the `NeuralNet` to detect and locate source code in a given frame are not included since this code repository is implemented in a learning plattform and the deep learning algorithms are constantly trained and improved.
-</p>
+</div>
 
 ## Methodology
 <img src="./misc/methodology.png">
