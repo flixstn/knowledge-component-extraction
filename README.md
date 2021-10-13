@@ -13,15 +13,24 @@ Batteries not included: the trained <code>Classifier</code> to detect the progra
 
 The main components of this repository are structured as follows:
 
-  * `analyzer/`: The core of the implementation handling initialization of every module and saving
+* `analyzer/`: The core of the implementation handling initialization of every module and saving
     the extracted knowledge components
 
-  * `classifier/`: Implementation of `LanguageClassifier` for classifying the programming language
+* `classifier/`: Implementation of `LanguageClassifier` for classifying the programming language
 
-  * `lexer/`: Implementation of different lexers based on the classifier programming language
+* `lexer/`: Implementation of different lexers based on the classifier programming language
 
-  * `neural_net/`: Implementation of custom code detection and extraction using retrained
+* `neural_net/`: Implementation of custom code detection and extraction using retrained
     `Yolo` and `Tesseract`
 
-  * `parser/`: Implementation of parsing the tokens from the lexer, processing them and recursively build
+* `parser/`: Implementation of parsing the tokens from the lexer, processing them and recursively build
     the knowledge component tree.
+
+## Environment
+In order to run the repository following prerequisites are required:
+* [Ubuntu 20.04](https://releases.ubuntu.com/20.04/) or higher
+
+* [OpenCV 4.5](https://opencv.org/) or higher
+
+* [YoutubeDL](https://youtube-dl.org/)
+
