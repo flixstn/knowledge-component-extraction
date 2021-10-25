@@ -17,7 +17,7 @@ fn main() {
 }
 
 fn try_main() -> Result<(), Box<dyn Error>> {
-    // TODO: add playlist parameter
+    // TODO: implement playlist parameter
     // argument parsing
     let matches = App::new("Knowledge Component Extraction")
         .version("0.1.0")
@@ -47,11 +47,11 @@ fn try_main() -> Result<(), Box<dyn Error>> {
     }
 
     if let Some(path) = matches.value_of("path") {
-        println!("Value for input: {}", path);
+        // TODO: implement
     } 
 
     if let Some(file) = matches.value_of("file") {
-        println!("Value for input: {}", file);
+        // TODO: implement
     }
 
     Ok(())
