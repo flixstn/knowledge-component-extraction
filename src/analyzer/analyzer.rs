@@ -8,7 +8,7 @@ use indexmap::IndexSet;
 use serde::{Serialize, Deserialize};
 
 
-const CLASSIFICATIONTHRESHOLD: usize = 8;
+const CLASSIFICATION_THRESHOLD: usize = 8;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VideoAnalyzer {
@@ -27,55 +27,58 @@ impl VideoAnalyzer {
         }
     }
 
+    // TODO: clean up this mess
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         self.download()?;
         let (sender, receiver) = mpsc::channel::<(String, i32)>();
         let url = self.video.url.clone();
-
+        // TODO: put language in parser struct?
         let mut parser = Arc::new(Mutex::new(ProtoParser::new()));
         let mut parser_clone = parser.clone();
         
         // TODO implement break condition
+        // TODO: outsurce in own method
+        // TODO: wrap try_recv() for better loop break
         let handle = thread::spawn(move || {
-            // let mut parser = ProtoParser::new_empty();
             if let Some(classification) = LanguageClassifier::classify(&url) {
-                    // let mut parser = ProtoParser::new(&url, classification);
                     parser_clone.lock().unwrap().parse_language(&url, classification);
+                    
                     loop {
                         let (value, time_code) = receiver.recv().unwrap();
-                        // parser.parse(&value, time_code).unwrap();
+                        
                         parser_clone.lock().unwrap().parse(&value, time_code).unwrap();
+                        thread::sleep(Duration::from_millis(500));
                     }
             }
             else {
                 let mut classification_string = String::new();
                 let mut classify = true;
+                
                 loop {
-                    // TODO: wrap unwrap
                     let (value, time_code) = receiver.recv().unwrap();
+                    
                     if classify {
                         classification_string.push_str(&value);
-                        if classification_string.chars().count() >= CLASSIFICATIONTHRESHOLD {
+                        if classification_string.chars().count() >= CLASSIFICATION_THRESHOLD {
                             if let Some(classification) = LanguageClassifier::classify_ml(&value) {
-                                // parser = ProtoParser::new(&url, classification);
                                 parser_clone.lock().unwrap().parse_language(&url, classification);
                             }
                             classify = false;
                         }
                     }
-                    // parser.parse(&value, time_code).unwrap();
                     parser_clone.lock().unwrap().parse(&value, time_code).unwrap();
                     thread::sleep(Duration::from_millis(500));
                 }
-            }    
+            }   
+             
         });
-
+        
         Yolo::run(sender, &self.video.path)?;
 
-        // TODO: implement transfer of knowledge components
+        // TODO: implement better transfer of knowledge components
         handle.join();
         self.knowledge_components = Arc::try_unwrap(parser).unwrap().into_inner().unwrap().get_knowledge_components();
-        // Arc::try_unwrap(parser).unwrap().into_inner().unwrap().parser.unwrap().get_knowledge_components();
+        
         Ok(())
     }
 
