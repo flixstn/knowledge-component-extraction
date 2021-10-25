@@ -9,7 +9,7 @@ use std::error::Error;
 
 use self::knowledge_component::KnowledgeComponent;
 
-// TODO: maybe use std::mem::MaybeUninit for parser
+// TODO: check implementation std::mem::MaybeUninit for parser
 #[derive(Debug)]
 pub struct ProtoParser {
     pub parser: Option<Box<dyn Parser>>,
@@ -44,7 +44,6 @@ impl ProtoParser {
     }
 
     pub fn parse(&mut self, file: &str, time_code: i32) -> Result<(), Box<dyn Error>> {      
-        // self.parser.unwrap().parse(file, time_code);
         if let Some(res) = self.parser.as_mut() {
             res.parse(file, time_code).unwrap();
         }
