@@ -2,7 +2,7 @@ use std::{process::Command, str::from_utf8};
 
 pub struct LanguageClassifier;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
 pub enum ProgrammingLanguage {
     C,
