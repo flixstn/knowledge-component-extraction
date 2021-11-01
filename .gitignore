@@ -4,3 +4,4 @@
 /video
 /src/classifier/classifier
 src/neural_net/yolov2.rs
+/output
