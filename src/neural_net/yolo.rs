@@ -9,11 +9,12 @@ use opencv::{
     videoio::{self, CAP_PROP_FPS, CAP_PROP_POS_MSEC, VideoCapture, VideoCaptureTrait}
 };
 use std::{error::Error, sync::mpsc::Sender};
+use crate::analyzer::analyzer::Message;
 
 pub struct Yolo;
 
 impl Yolo {
-    pub fn run(sender: Sender<(String, i32)>, file: &str) -> Result<(), Box<dyn Error>>{
+    pub fn run(sender: Sender<(Message, i32)>, file: &str) -> Result<(), Box<dyn Error>>{
         // initialize video capture 
         let mut video_capture = VideoCapture::from_file(
             file, 
@@ -180,14 +181,14 @@ impl Yolo {
                 if !gray.empty()? {
                     // TODO: change component level to default: 0?
                     ocr_output = ocr.run(&src, 0, 1)?;
-                    sender.send((ocr_output, frame_position));
+                    sender.send((Message::StreamMessage(ocr_output), frame_position));
                 }
 
                 // show frame
                 highgui::imshow("image", &src)?;
             }
         }
-
+        sender.send((Message::EndMessage, 0));
         Ok(())
     }
 }

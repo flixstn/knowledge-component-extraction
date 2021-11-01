@@ -3,10 +3,9 @@ use crate::{
     neural_net::yolo::Yolo, 
     parser::{ProtoParser, knowledge_component::KnowledgeComponent}
 };
-use std::{env::current_dir, error::Error, fs::write, process::Command, str::from_utf8, sync::{Arc, Mutex, mpsc}, thread, time::Duration};
+use std::{env::current_dir, error::Error, fs::write, process::Command, str::from_utf8, sync::{Arc, Mutex, mpsc::{self, Receiver}}, thread, time::Duration};
 use indexmap::IndexSet;
 use serde::{Serialize, Deserialize};
-
 
 const CLASSIFICATION_THRESHOLD: usize = 8;
 
@@ -27,72 +26,87 @@ impl VideoAnalyzer {
         }
     }
 
-    // TODO: clean up this mess
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
-        self.download()?;
-        let (sender, receiver) = mpsc::channel::<(String, i32)>();
+        self.download_video()?;
+        let (sender, receiver) = mpsc::channel::<(Message, i32)>();
         let url = self.video.url.clone();
-        // TODO: put language in parser struct?
-        let mut parser = Arc::new(Mutex::new(ProtoParser::new()));
-        let mut parser_clone = parser.clone();
-        
-        // TODO implement break condition
-        // TODO: outsurce in own method
-        // TODO: wrap try_recv() for better loop break
+
         let handle = thread::spawn(move || {
-            if let Some(classification) = LanguageClassifier::classify(&url) {
-                    parser_clone.lock().unwrap().parse_language(&url, classification);
-                    
-                    loop {
-                        let (value, time_code) = receiver.recv().unwrap();
-                        
-                        parser_clone.lock().unwrap().parse(&value, time_code).unwrap();
-                        thread::sleep(Duration::from_millis(500));
-                    }
-            }
-            else {
-                let mut classification_string = String::new();
-                let mut classify = true;
-                
-                loop {
-                    let (value, time_code) = receiver.recv().unwrap();
-                    
-                    if classify {
-                        classification_string.push_str(&value);
-                        if classification_string.chars().count() >= CLASSIFICATION_THRESHOLD {
-                            if let Some(classification) = LanguageClassifier::classify_ml(&value) {
-                                parser_clone.lock().unwrap().parse_language(&url, classification);
-                            }
-                            classify = false;
-                        }
-                    }
-                    parser_clone.lock().unwrap().parse(&value, time_code).unwrap();
-                    thread::sleep(Duration::from_millis(500));
-                }
-            }   
-             
+            parse_knowledge_components(receiver, url)
         });
         
         Yolo::run(sender, &self.video.path)?;
 
-        // TODO: implement better transfer of knowledge components
-        handle.join();
-        self.knowledge_components = Arc::try_unwrap(parser).unwrap().into_inner().unwrap().get_knowledge_components();
+        let parser = handle.join().expect("Error joining handle");
+        self.knowledge_components = parser.get_knowledge_components();
         
         Ok(())
     }
 
-    pub fn download(&self) -> Result<(), Box<dyn Error>> {
+    pub fn download_video(&self) -> Result<(), Box<dyn Error>> {
         Command::new("youtube-dl").args(&["-f", "best", "-o", &format!("video//{}.mp4", self.video.title), &self.video.url]).output()?;
         Ok(())
     }
 
-    pub fn save(&self) -> Result<(), Box<dyn Error>> {
+    pub fn save_result(&self) -> Result<(), Box<dyn Error>> {
         let serialized = serde_json::to_string_pretty(&self)?;
-        write(format!("./src/{}.json", self.video.title), serialized)?;
+        std::fs::create_dir("./output");
+        write(format!("./output/{}.json", self.video.title), serialized)?;
         
         Ok(())
     }
+}
+
+fn parse_knowledge_components(receiver: Receiver<(Message, i32)>, url: String) -> ProtoParser {
+    let mut parser = ProtoParser::new();
+    
+    if let Some(classification) = LanguageClassifier::classify(&url) {
+            parser.parse_language(&url, classification);
+            
+            loop {
+                if let Ok(message) = receiver.recv() {
+                    match message.0 {
+                        Message::StreamMessage(msg) => {
+                            parser.parse(&msg, message.1).unwrap();
+                        },
+                        Message::EndMessage => break,
+                    }
+                }
+                thread::sleep(Duration::from_millis(500));
+            }
+    }
+    else {
+        let mut classification_string = String::new();
+        let mut classify = true;
+        
+        loop {
+            if let Ok(message) = receiver.recv() {
+                match message.0 {
+                    Message::StreamMessage(msg) => {
+                        if classify {
+                            classification_string.push_str(&msg);
+                            
+                            if classification_string.chars().count() >= CLASSIFICATION_THRESHOLD {
+                                if let Some(classification) = LanguageClassifier::classify_ml(&msg) {
+                                    parser.parse_language(&url, classification);
+                                }
+                                classify = false;
+                            }
+                        }
+                        parser.parse(&msg, message.1).unwrap();
+                    },
+                    Message::EndMessage => break,
+                }
+            }  
+            thread::sleep(Duration::from_millis(500));
+        }
+    }   
+    parser
+}
+
+pub enum Message {
+    StreamMessage(String),
+    EndMessage,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -43,7 +43,7 @@ fn try_main() -> Result<(), Box<dyn Error>> {
     if let Some(url) = matches.value_of("url") {
         let mut analyzer = VideoAnalyzer::new(url);
         analyzer.run()?;
-        analyzer.save()?;
+        analyzer.save_result()?;
     }
 
     if let Some(path) = matches.value_of("path") {
