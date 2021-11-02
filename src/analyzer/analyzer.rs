@@ -1,8 +1,4 @@
-use crate::{
-    classifier::classifier::LanguageClassifier, 
-    neural_net::yolo::Yolo, 
-    parser::{ProtoParser, knowledge_component::KnowledgeComponent}
-};
+use crate::{classifier::classifier::{LanguageClassifier, ProgrammingLanguage}, neural_net::yolo::Yolo, parser::{ProtoParser, knowledge_component::KnowledgeComponent}};
 use std::{env::current_dir, error::Error, fs::write, process::Command, str::from_utf8, sync::{Arc, Mutex, mpsc::{self, Receiver}}, thread, time::Duration};
 use indexmap::IndexSet;
 use serde::{Serialize, Deserialize};
@@ -39,6 +35,7 @@ impl VideoAnalyzer {
 
         let parser = handle.join().expect("Error joining handle");
         self.knowledge_components = parser.get_knowledge_components();
+        self.language = parser.language.unwrap().to_string().to_lowercase();
         
         Ok(())
     }
