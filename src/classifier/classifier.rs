@@ -1,5 +1,6 @@
 use std::{process::Command, str::from_utf8};
 
+// TODO: change to LanguageClassifier(ProgrammingLanguage) and return language to parser
 pub struct LanguageClassifier;
 
 #[derive(Debug, Clone, Copy)]
@@ -9,6 +10,18 @@ pub enum ProgrammingLanguage {
     Cpp,
     Java,
     Python,
+}
+
+impl std::fmt::Display for ProgrammingLanguage {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl From<&ProgrammingLanguage> for String {
+    fn from(lang: &ProgrammingLanguage) -> Self {
+        lang.to_string()
+    }
 }
 
 impl LanguageClassifier {
