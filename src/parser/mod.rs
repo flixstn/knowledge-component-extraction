@@ -3,41 +3,46 @@ pub(crate) mod pyparser;
 pub(crate) mod knowledge_component;
 
 use indexmap::IndexSet;
-
 use crate::{classifier::classifier::ProgrammingLanguage, parser::cjparser::CJParser, parser::pyparser::PyParser};
 use std::error::Error;
-
 use self::knowledge_component::KnowledgeComponent;
 
 // TODO: check implementation std::mem::MaybeUninit for parser
 #[derive(Debug)]
 pub struct ProtoParser {
     pub parser: Option<Box<dyn Parser>>,
+    pub language: Option<Box<ProgrammingLanguage>>
 }
 
 impl ProtoParser {
     pub fn new() -> Self {
         Self {
             parser: None,
+            language: None,
         }
     }
+
     pub fn parse_language(&mut self, source: &str, language: ProgrammingLanguage) {
         match language {
             ProgrammingLanguage::C => {
                 let parser = CJParser::new(source);
-                self.parser = Some(Box::new(parser))
+                self.parser = Some(Box::new(parser));
+                self.language = Some(Box::new(ProgrammingLanguage::C));
             }
             ProgrammingLanguage::Cpp => {
                 let parser = CJParser::new(source);
-                self.parser = Some(Box::new(parser))
+                self.parser = Some(Box::new(parser));
+                self.language = Some(Box::new(ProgrammingLanguage::Cpp));
             }
             ProgrammingLanguage::Java => {
                 let parser = CJParser::new(source);
-                self.parser = Some(Box::new(parser))
+                self.parser = Some(Box::new(parser));
+                self.language = Some(Box::new(ProgrammingLanguage::Java));
             }
             ProgrammingLanguage::Python => {
                 let parser = PyParser::new(source);
-                self.parser = Some(Box::new(parser))
+                self.parser = Some(Box::new(parser));
+                self.language = Some(Box::new(ProgrammingLanguage::Python));
             }
             _ => {}
         }
