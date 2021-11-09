@@ -541,9 +541,24 @@ impl Parser for CJParser {
                     components.insert(component);
                 }
                 Token::Less => {
-                    let classification = parse_comparison(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                    let peek = tokens.get(idx-1).unwrap_or(&Token::Error);
+
+                    match &*peek {
+                        // check whether previous token is preprocessor statement
+                        Token::Preprocessor(_) => {
+                            for (i, tk) in tokens.iter().skip(idx).enumerate() {
+                                if *tk == Token::LineBreak {
+                                    token_iter.nth(i - idx);
+                                }
+                            }
+                        }
+                        // parse as mathematical operator
+                        _ => {
+                            let classification = parse_comparison(&token);
+                            let component = KnowledgeComponent::new(classification, token, &time_stamp);
+                            components.insert(component);
+                        }
+                    }
                 }
                 Token::LessOrEquals => {
                     let classification = parse_comparison(&token);
@@ -779,8 +794,7 @@ impl Parser for CJParser {
                     let component = KnowledgeComponent::new(classification, token, &time_stamp);
                     components.insert(component); 
                 }
-
-                // _ => ()
+                _ => ()
             }
         }
         

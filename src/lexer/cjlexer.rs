@@ -261,11 +261,12 @@ pub enum Token {
     #[regex(r"/\*([^*]|\*[^/])*\*/")]
     Comment,
     #[error]
-    #[regex(r"[ \t\n\r]+", logos::skip)]
+    #[regex(r"[ \t]+", logos::skip)]
+    // #[regex(r"[ \t\n\r]+", logos::skip)]
     Error,
 
-    // #[regex(r"[ \t\n\r]+")]
-    // Whitespace,
+    #[regex(r"[\n\r]+")]
+    LineBreak,
     // --------------------------------------------------------
     // Java Parser
     #[token("import")]
