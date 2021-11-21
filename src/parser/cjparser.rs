@@ -1,12 +1,4 @@
-use crate::{
-    lexer::cjlexer::Token,
-    parser::Parser,
-    parser::knowledge_component::{KnowledgeComponent, Component},
-};
-use indexmap::IndexSet;
-use logos::Logos;
-use serde::{Serialize, Deserialize};
-use std::error::Error;
+use crate::prelude::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CJParser {
@@ -26,570 +18,246 @@ impl CJParser {
 impl Parser for CJParser {
     fn parse(&mut self, file: &str, time_code: i32) -> Result<(), Box<dyn Error>> {
         let tokens: Vec<_> = Token::lexer(&file).collect();
-        let components = &mut self.knowledge_components;
         let mut token_iter = tokens.iter().enumerate();
+        
+        let knowledge_component_set = &mut self.knowledge_components;
+        let mut knowledge_component: KnowledgeComponent;
+        let mut plain_component: Component;
+
         let time_stamp = format!("{}&t={}", self.source, time_code);
 
+        // eprintln!("{:?}", tokens.clone());
         while let Some((idx, token)) = token_iter.next() {
             match token {
                 // Preprocessor Classification
                 // preprocessor
                 Token::Preprocessor(ident) => {
-                    let classification = parse_preprocessor(&token);
-                    let component = KnowledgeComponent::new_with_ident(classification, "Preprocessor", ident, &time_stamp);
-                    components.insert(component);
+                    plain_component = parse_preprocessor(&token);
                 }
                 // Statement Classification
                 // iteration
-                Token::For => {
-                    let classification = parse_iteration(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::While => {
-                    let classification = parse_iteration(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::DoWhile => {
-                    let classification = parse_iteration(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                Token::For | Token::While | Token::DoWhile => {
+                    plain_component = parse_iteration(&token);
                 }
                 // selection
-                Token::Switch => {
-                    let classification = parse_condition(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Case => {
-                    let classification = parse_label(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Default => {
-                    let classification = parse_label(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::If => {
-                    let classification = parse_condition(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::ElseIf => {
-                    let classification = parse_condition(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Else => {
-                    let classification = parse_condition(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                Token::Switch | Token::Case | Token::Default | Token::If | Token::ElseIf | Token::Else => {
+                    plain_component = parse_condition(&token);
                 }
                 // jump
-                Token::Break => {
-                    let classification = parse_jump(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Continue => {
-                    let classification = parse_jump(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Goto => {
-                    let classification = parse_jump(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Return => {
-                    let classification = parse_jump(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                Token::Break | Token::Continue | Token::Goto | Token::Return => {
+                    plain_component = parse_jump(&token);
                 }
                 // Declaration Classification
                 // arithmetic type
-                Token::Unsigned => {
-                    let classification = parse_sign(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Signed => {
-                    let classification = parse_sign(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);   
+                Token::Unsigned | Token::Signed => {
+                    plain_component = parse_sign(&token);
                 }
                 Token::Char => {
-                    let classification = parse_character(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                    plain_component = parse_character(&token);
                 }
-                Token::Int => {
-                    let classification = parse_integer(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                Token::Int | Token::Short | Token::ShortInt | Token::Long | Token::LongInt | Token::LongLong | Token::LongLongInt => {
+                    plain_component = parse_integer(&token);
                 }
-                Token::Short => {
-                    let classification = parse_integer(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::ShortInt => {
-                    let classification = parse_integer(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Long => {
-                    let classification = parse_integer(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::LongInt => {
-                    let classification = parse_integer(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::LongLong => {
-                    let classification = parse_integer(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::LongLongInt => {
-                    let classification = parse_integer(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Float => {
-                    let classification = parse_float(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Double => {
-                    let classification = parse_float(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::LongDouble => {
-                    let classification = parse_float(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                Token::Float | Token::Double | Token::LongDouble => {
+                    plain_component = parse_float(&token);
                 }
                 Token::Bool => {
-                    let classification = parse_boolean(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                    plain_component = parse_boolean(&token);
                 }
                 Token::String => {
-                    let classification = parse_string(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                    plain_component = parse_string(&token);
                 }
                 // elaborated type specifier
-                Token::Enum => {
-                    let classification = parse_elaborated_type_specifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Struct => {
-                    let classification = parse_elaborated_type_specifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Union => {
-                    let classification = parse_elaborated_type_specifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Class => {
-                    let classification = parse_elaborated_type_specifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Template => {
-                    // TODO: Data Type -> Abstract Data Type -> Data Type -> Statement
+                Token::Enum | Token::Struct | Token::Union | Token::Class | Token::Template => {
+                    // TODO: Template: Data Type -> Abstract Data Type -> Data Type -> Statement
+                    plain_component = parse_elaborated_type_specifier(&token);
                 }
                 Token::Void => {
-                    let classification = parse_void(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);    
+                    plain_component = parse_void(&token);
                 }
-
-                // TODO: implement Declarators!-----------
-                // ARRAY
-                Token::Array => {
-                    let classification = parse_declarator(&Token::Array);
-                    let component = KnowledgeComponent::new(classification, &Token::Array, &time_stamp);
-                    components.insert(component);
+                // declarators
+                // array
+                Token::OpenBracket => {
+                    // TODO: refine implementation
+                    plain_component = parse_declarator(&Token::Array);
+                    knowledge_component = KnowledgeComponent::new(plain_component, &Token::Array, &time_stamp);
+                    knowledge_component_set.insert(knowledge_component);
+                    continue;
                 }
-                Token::Function => {
+                // function
+                Token::OpenParen => {
+                    // TODO: refine implementation
+                    plain_component = parse_declarator(&Token::Function);
+                    knowledge_component = KnowledgeComponent::new(plain_component, &Token::Function, &time_stamp);
+                    knowledge_component_set.insert(knowledge_component);
+                    continue;
+                }
+                // IDENTIFIER       // VARIABLE
+                // pointer
+                Token::Asterisk => {
                     let peek = tokens.get(idx-1).unwrap_or(&Token::Error);
-                    println!("{:?}", peek);
-                    match *peek {
-                        // check whether token is function
-                        Token::Int | Token::Short | Token::Long | Token::Float | Token::Double |
-                        Token::Bool | Token::String | Token::Volatile | Token::Const | Token::Restrict => {
-                            let classification = parse_declarator(&Token::Function);
-                            let component = KnowledgeComponent::new(classification, &Token::Function, &time_stamp);
-                            components.insert(component);
+                    match &*peek {
+                        // check for multiplication
+                        Token::Identifier(_) | Token::Number(_) => {
+                            plain_component = parse_arithmetic(&Token::Multiplication);
+                            knowledge_component = KnowledgeComponent::new(plain_component, &Token::Multiplication, &time_stamp);
+                            knowledge_component_set.insert(knowledge_component);
+                            continue;
                         }
-                        // check whether token is function call
+                        // check for pointer operation
                         _ => {
-                            let classification = parse_function_call(&Token::FunctionCall);
-                            let component = KnowledgeComponent::new(classification, &Token::FunctionCall, &time_stamp);
-                            components.insert(component);
+                            plain_component = parse_declarator(&Token::Pointer);
+                            knowledge_component = KnowledgeComponent::new(plain_component, &Token::Pointer, &time_stamp);
+                            knowledge_component_set.insert(knowledge_component);
+                            continue;
                         }
                     }
-                    // check whether token is function call
-                    let classification = parse_declarator(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                },
-                // IDENTIFIER       // VARIABLE
-                // POINTER
+                }
                 // TYPEDEFNAME
-                // --------------------------------------- 
 
                 // storage class
-                Token::Auto => {
-                    let classification = parse_storage_class(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);    
-                }
-                Token::Extern => {
-                    let classification = parse_storage_class(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component); 
-                }
-                Token::Register => {
-                    let classification = parse_storage_class(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component); 
-                }
-                Token::Static => {
-                    let classification = parse_storage_class(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component); 
-                }
-                Token::ThreadLocal => {
-                    let classification = parse_storage_class(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component); 
-                }
-                Token::Typedef => {
-                    let classification = parse_storage_class(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component); 
-                }
-                // TODO: check CPP Grammar for correct implementation
-                Token::Decltype => {
-                    let classification = parse_storage_class(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component); 
+                Token::Auto | Token::Extern | Token::Register | Token::Static | Token::ThreadLocal | Token::Typedef | Token::Decltype => {
+                    plain_component = parse_storage_class(&token);
                 }
                 // type qualifier
-                Token::Atomic => {
-                    let classification = parse_type_qualifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component); 
-                }
-                Token::Const => {
-                    let classification = parse_type_qualifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Restrict => {
-                    let classification = parse_type_qualifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Volatile => {
-                    let classification = parse_type_qualifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Mutable => {
-                    let classification = parse_type_qualifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Public => {
-                    let classification = parse_access_specifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Protected => {
-                    let classification = parse_access_specifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Private => {
-                    let classification = parse_access_specifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                Token::Atomic | Token::Const | Token::Restrict | Token::Volatile | Token::Mutable | Token::Public | Token::Protected | Token::Private => {
+                    plain_component = parse_access_specifier(&token);
                 }
                 // Expression Declaration
                 // arithmetic
-                Token::Plus => {
-                    let classification = parse_arithmetic(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Minus => {
-                    let classification = parse_arithmetic(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                // TODO: implement MUL and PTR
-                Token::Multiplication => {
-                    let classification = parse_arithmetic(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);       
-                }
-                Token::Divide => {
-                    let classification = parse_arithmetic(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Modulo => {
-                    let classification = parse_arithmetic(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                Token::Plus | Token::Minus | Token::Multiplication | Token::Divide | Token::Modulo => {
+                    plain_component = parse_arithmetic(&token);
                 }
                 // assignment
-                Token::AddAssignment => {
-                    let classification = parse_assignment(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::SubAssignment => {
-                    let classification = parse_assignment(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::MultAssignment => {
-                    let classification = parse_assignment(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::DivAssignment => {
-                    let classification = parse_assignment(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::ModAssignment => {
-                    let classification = parse_assignment(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Assignment => {
-                    let classification = parse_assignment(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                Token::AddAssignment | Token::SubAssignment | Token::MultAssignment | Token::DivAssignment | Token::ModAssignment | Token::Assignment => {
+                    plain_component = parse_assignment(&token);
                 }
                 // bitwise
-                Token::Ampersand => {
+                Token::Ampersand | Token::BitwiseAnd | Token::Reference => {
+                    // TODO: potential 'attempt to subtract with overflow'
                     let peek = tokens.get(idx-1).unwrap_or(&Token::Error);
-                    match *peek {
-                        Token::Number(_) | Token::Identifier(_) => {
-                            let classification = parse_bitwise(&Token::BitwiseAnd);
-                            let component = KnowledgeComponent::new(classification, &Token::BitwiseAnd, &time_stamp);
-                            components.insert(component);
+                    match &*peek {
+                        Token::Identifier(_ident) | Token::Number(_ident) => {
+                            plain_component = parse_bitwise(&Token::BitwiseAnd);
+                            knowledge_component = KnowledgeComponent::new(plain_component, &Token::BitwiseAnd, &time_stamp);
+                            knowledge_component_set.insert(knowledge_component);
+                            continue;
                         }
                         _ => {
-                            let classification = parse_member_access(&Token::Reference);
-                            let component = KnowledgeComponent::new(classification, &Token::Reference, &time_stamp);
-                            components.insert(component);
+                            plain_component = parse_bitwise(&Token::Reference);
+                            knowledge_component = KnowledgeComponent::new(plain_component, &Token::Reference, &time_stamp);
+                            knowledge_component_set.insert(knowledge_component);
+                            continue;
                         }
                     }
                 }
-                Token::BitwiseAnd => {}
-                Token::Reference => {}
-                Token::BitwiseOr => {
-                    let classification = parse_bitwise(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::BitwiseXor => {
-                    let classification = parse_bitwise(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::BitwiseNot => {
-                    let classification = parse_bitwise(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                Token::BitwiseOr | Token::BitwiseXor | Token::BitwiseNot | Token::LeftShiftAssignment | Token::RightShiftAssignment | Token::BitwiseAndAssignment | 
+                Token::BitwiseOrAssignment | Token::BitwiseXorAssignment | Token::UnsignedRightShiftOperator => {
+                    plain_component = parse_bitwise(&token);
                 }
                 Token::LeftOperator => {
                     let peek = tokens.get(idx-1).unwrap_or(&Token::Error);
                     match &*peek {
-                        // check whether lhs is identifier or cout
+                        // check whether lhs is stream operator
                         Token::Identifier(ident) => {
                             match ident.as_str() {
+                                // TODO: skip tokens until linebreak
                                 "cout" | "cerr" | "clog" => {
                                     continue;
                                 }
                                 _ => {
-                                    let classification = parse_bitwise(&Token::LeftShift);
-                                    let component = KnowledgeComponent::new(classification, &Token::LeftShift, &time_stamp);
-                                    components.insert(component);
+                                    plain_component = parse_bitwise(&Token::LeftShift);
+                                    knowledge_component = KnowledgeComponent::new(plain_component, &Token::LeftShift, &time_stamp);
+                                    knowledge_component_set.insert(knowledge_component);
+                                    continue;
                                 }
                             }
                         }
-                        // check whether lhs is Token::Number
-                        Token::Number(_) => {
-                            let classification = parse_bitwise(&Token::LeftShift);
-                            let component = KnowledgeComponent::new(classification, &Token::LeftShift, &time_stamp);
-                            components.insert(component);
+                        _ => {
+                            plain_component = parse_bitwise(&Token::LeftShift);
+                            knowledge_component = KnowledgeComponent::new(plain_component, &Token::LeftShift, &time_stamp);
+                            knowledge_component_set.insert(knowledge_component);
+                            continue;
                         }
-                        _ => ()
-                    }     
-                }
-                Token::LeftShiftAssignment => {
-                    let classification = parse_bitwise(&token);
-                    let component = KnowledgeComponent::new(classification, &Token::RightShift, &time_stamp);
-                    components.insert(component);
+                    }
+                    plain_component = parse_bitwise(&token);
                 }
                 Token::RightOperator => {
                     let peek = tokens.get(idx-1).unwrap_or(&Token::Error);
-                    // check whether lhs is identifier or cin
                     match &*peek {
+                        // check whether lhs is stream operator
                         Token::Identifier(ident) => {
-                            if let "cin" = ident.as_str() {
-                                continue;
-                            }
-                            let classification = parse_bitwise(&Token::RightShift);
-                            let component = KnowledgeComponent::new(classification, &Token::RightShift, &time_stamp);
-                            components.insert(component);
-                        }
-                        _ => {
-                            let classification = parse_bitwise(&Token::RightShift);
-                            let component = KnowledgeComponent::new(classification, &Token::RightShift, &time_stamp);
-                            components.insert(component);
-                        }
-                    }
-                }
-                Token::RightShiftAssignment => {
-                    let classification = parse_bitwise(&token);
-                    let component = KnowledgeComponent::new(classification, &Token::RightShift, &time_stamp);
-                    components.insert(component);
-                }
-                Token::BitwiseAndAssignment => {
-                    let classification = parse_bitwise(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::BitwiseOrAssignment => {
-                    let classification = parse_bitwise(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::BitwiseXorAssignment => {
-                    let classification = parse_bitwise(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                // logical
-                Token::And => {
-                    let classification = parse_logical(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Or => {
-                    let classification = parse_logical(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Not => {
-                    let classification = parse_logical(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                // sizeof
-                Token::SizeOf => {
-                    let classification = parse_size_of(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                // initializiation
-                Token::DesignatedInitializer => {
-                    let classification = parse_initialization(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                // function call
-                Token::FunctionCall => {}
-                Token::TypeCast => {
-                    let classification = parse_type_cast(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::ConditionalOperator => {
-                    let classification = parse_conditional_operator(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                // comparison
-                Token::Greater => {
-                    let classification = parse_comparison(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::GreaterOrEquals => {
-                    let classification = parse_comparison(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Less => {
-                    let peek = tokens.get(idx-1).unwrap_or(&Token::Error);
-
-                    match &*peek {
-                        // check whether previous token is preprocessor statement
-                        Token::Preprocessor(_) => {
-                            for (i, tk) in tokens.iter().skip(idx).enumerate() {
-                                if *tk == Token::LineBreak {
-                                    token_iter.nth(i - idx);
+                            match ident.as_str() {
+                                // TODO: skip tokens until linebreak
+                                "cin" => {
+                                    continue;
+                                }
+                                _ => {
+                                    plain_component = parse_bitwise(&Token::RightShift);
+                                    knowledge_component = KnowledgeComponent::new(plain_component, &Token::RightShift, &time_stamp);
+                                    knowledge_component_set.insert(knowledge_component);
+                                    continue;
                                 }
                             }
                         }
-                        // parse as mathematical operator
                         _ => {
-                            let classification = parse_comparison(&token);
-                            let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                            components.insert(component);
+                            plain_component = parse_bitwise(&Token::RightShift);
+                            knowledge_component = KnowledgeComponent::new(plain_component, &Token::RightShift, &time_stamp);
+                            knowledge_component_set.insert(knowledge_component);
+                            continue;
                         }
                     }
                 }
-                Token::LessOrEquals => {
-                    let classification = parse_comparison(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                // logical
+                Token::And | Token::Or | Token::Not => {
+                    plain_component = parse_logical(&token);
                 }
-                Token::Equals => {
-                    let classification = parse_comparison(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                // sizeof
+                Token::SizeOf => {
+                    plain_component = parse_size_of(&token);
                 }
-                Token::NotEquals => {
-                    let classification = parse_comparison(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                // initialization
+                // DESIGNATED INITIALIZER
+                // EQUALS INITIALIZER
+                // INITIALIZATION LIST
+                
+                // function call
+                // FUNCTION CALL
+                
+                // typecast
+                Token::TypeCast => {
+                    plain_component = parse_type_cast(&token);
                 }
-                Token::ThreeWayComparison => {
-                    let classification = parse_comparison(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);                   
+                // conditional operator
+                Token::ConditionalOperator => {
+                    plain_component = parse_conditional_operator(&token);
+                }
+                // COMMA OPERATOR
+                // EXPRESSION LIST
+
+                // comparison
+                Token::GreaterOrEquals | Token::LessOrEquals | Token::Equals | Token::NotEquals | Token::ThreeWayComparison => {
+                    plain_component = parse_comparison(&token);
+                }
+                Token::Less | Token::Greater => {
+                    // TODO: refine implementation
+                    let peek_forward = tokens.get(idx+1).unwrap_or(&Token::Error);
+                    let peek_backword = tokens.get(idx-1).unwrap_or(&Token::Error);
+
+                    match (peek_forward, peek_backword) {
+                        (Token::Number(_), Token::Identifier(_)) => {
+                            plain_component = parse_comparison(&token);
+                        }
+                        _ => continue
+                    }
+
+                    plain_component = parse_comparison(&token);
                 }
                 // member access
-                Token::DotOperator => {
-                    let classification = parse_member_access(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::ArrowOperator => {
-                    let classification = parse_member_access(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                Token::DotOperator | Token::ArrowOperator=> {
+                    // TODO: implement 
+                    // plain_component = parse_member_access(&token);
+                    continue;
                 }
                 // increment decrement
                 Token::Increment => {
@@ -597,15 +265,17 @@ impl Parser for CJParser {
                     match &*peek {
                         // check whether rhs is variable | number
                         Token::Identifier(_ident) | Token::Number(_ident) => {
-                            let classification = parse_increment(&Token::PrefixIncrement);
-                            let component = KnowledgeComponent::new(classification, &Token::PrefixIncrement, &time_stamp);
-                            components.insert(component);
+                            plain_component = parse_increment(&Token::PrefixIncrement);
+                            knowledge_component = KnowledgeComponent::new(plain_component, &Token::PrefixIncrement, &time_stamp);
+                            knowledge_component_set.insert(knowledge_component);
+                            continue;
                         }
-                        // check whether lhs is variable | number
                         _ => {
-                            let classification = parse_increment(&Token::PostfixIncrement);
-                            let component = KnowledgeComponent::new(classification, &Token::PostfixIncrement, &time_stamp);
-                            components.insert(component); 
+                            // check whether lhs is variable | number
+                            plain_component = parse_increment(&Token::PostfixIncrement);
+                            knowledge_component = KnowledgeComponent::new(plain_component, &Token::PostfixIncrement, &time_stamp);
+                            knowledge_component_set.insert(knowledge_component);
+                            continue;
                         }
                     }
                 }
@@ -614,190 +284,78 @@ impl Parser for CJParser {
                     match &*peek {
                         // check whether rhs is variable | number
                         Token::Identifier(_ident) | Token::Number(_ident) => {
-                            let classification = parse_decrement(&Token::PrefixDecrement);
-                            let component = KnowledgeComponent::new(classification, &Token::PrefixDecrement, &time_stamp);
-                            components.insert(component);
+                            plain_component = parse_decrement(&Token::PrefixDecrement);
+                            knowledge_component = KnowledgeComponent::new(plain_component, &Token::PrefixDecrement, &time_stamp);
+                            knowledge_component_set.insert(knowledge_component);
+                            continue;
                         }
                         // check whether lhs is variable | number
                         _ => {
-                            let classification = parse_decrement(&Token::PostfixDecrement);
-                            let component = KnowledgeComponent::new(classification, &Token::PostfixDecrement, &time_stamp);
-                            components.insert(component); 
+                            plain_component = parse_decrement(&Token::PostfixDecrement);
+                            knowledge_component = KnowledgeComponent::new(plain_component, &Token::PostfixDecrement, &time_stamp);
+                            knowledge_component_set.insert(knowledge_component);
+                            continue;
                         }
-                    }
+                    }    
                 }
-                // TODO: primary expression
-
-                // ------------------------------------------
-                Token::New => {
-                    let classification = parse_allocation(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);      
+                // memory allocation
+                Token::New | Token::Delete => {
+                    plain_component = parse_allocation(&token);
                 }
-                Token::Delete => {
-                    let classification = parse_allocation(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);      
+                // scope resolution
+                Token::ScopeResolution => {
+                    plain_component = parse_scope_resolution(&token);
                 }
-                Token::ScopeResolution => todo!(),
-                // ------------------------------------------
-                Token::Number(_ident) => {
-
+                Token::True | Token::False | Token::Null => {
+                    plain_component = parse_predefined_constant(&token);
                 }
-                Token::Identifier(_ident) => {
-                    let classification = parse_declarator(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);    
-                },
-                Token::Error => {},
-                Token::StringDoubleQuoted(_ident) => {}
-                Token::LeftShift => todo!(),
-                Token::RightShift => todo!(),
-                Token::PrefixIncrement => todo!(),
-                Token::PostfixIncrement => todo!(),
-                Token::PrefixDecrement => todo!(),
-                Token::PostfixDecrement => todo!(),
-                Token::Using => todo!(),
-                Token::Namespace => todo!(),
-                Token::Comment => todo!(),
-                Token::True => {
-                    let classification = parse_predefined_constant(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
+                Token::Using => {
+                    plain_component = parse_using(&token);
                 }
-                Token::False => {
-                    let classification = parse_predefined_constant(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
+                Token::Namespace => {
+                    plain_component = parse_namespace(&token);
                 }
-                Token::Pointer => {},
-                Token::TypedefName => {},
-                Token::Null => {
-                    let classification = parse_predefined_constant(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);    
+                // --------------------------------------------------------
+                // compilation unit
+                Token::Import | Token::Package => {
+                    plain_component = parse_compilation_unit(&token);
                 }
-                // Compilation Unit
-                Token::Import => {
-                    let classification = parse_compilation_unit(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
-                },
-                Token::Package => {
-                    let classification = parse_compilation_unit(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
+                // modifier
+                Token::Annotation | Token::Abstract | Token::Final | Token::Native | Token::Synchronized | Token::Transient | Token::StrictFp | Token::Assert => {
+                    plain_component = parse_modifier(&token);
                 }
-                // Modifier
-                Token::Annotation => {
-                    let classification = parse_modifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
-                }
-                Token::Abstract => {
-                    let classification = parse_modifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
-                }
-                Token::Final => {
-                    let classification = parse_modifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
-                }
-                Token::Native => {
-                    let classification = parse_modifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
-                }
-                Token::Synchronized => {
-                    let classification = parse_modifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
-                }
-                Token::Transient => {
-                    let classification = parse_modifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
-                }
-                Token::StrictFp => {
-                    let classification = parse_modifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
-                }
-                Token::Assert => {
-                    let classification = parse_modifier(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
-                }
-                // Abstract Data Type
                 Token::Interface => {
-                    let classification = parse_abstract_data_type(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
+                    plain_component = parse_abstract_data_type(&token);
                 }
-                // Try/Catch
-                Token::Try => {
-                    let classification = parse_try_block(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                // try/catch
+                Token::Try | Token::Catch | Token::Finally=> {
+                    plain_component = parse_try_block(&token);
                 }
-                Token::Catch => {
-                    let classification = parse_try_block(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
+                Token::Throw | Token::Throws => {
+                    plain_component = parse_throw(&token);
                 }
-                Token::Finally => {
-                    let classification = parse_try_block(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                // Throw
-                Token::Throws => {
-                    let classification = parse_throw(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                Token::Throw => {
-                    let classification = parse_throw(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                // Bitwise
-                Token::UnsignedRightShiftOperator => {
-                    let classification = parse_bitwise(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);
-                }
-                // Primary Expression
+                // primary expression
                 Token::Super => {
-                    let classification = parse_super(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component);  
+                    plain_component = parse_super(&token);
                 }
                 Token::This => {
-                    let classification = parse_this(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component); 
+                    plain_component = parse_this(&token);
                 }
-                Token::Extends => {
-                    let classification = parse_class_extension(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component); 
-                }
-                Token::Implements => {
-                    let classification = parse_class_extension(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component); 
+                Token::Extends | Token::Implements => {
+                    plain_component = parse_class_extension(&token);
                 }
                 Token::Var => {
-                    let classification = parse_var(&token);
-                    let component = KnowledgeComponent::new(classification, token, &time_stamp);
-                    components.insert(component); 
+                    plain_component = parse_var(&token);
                 }
-                _ => ()
+                _ => {
+                    // plain_component = parse_iteration(&token);
+                    continue;
+                }
             }
+            knowledge_component = KnowledgeComponent::new(plain_component.clone(), token, &time_stamp);
+            knowledge_component_set.insert(knowledge_component.clone());
         }
-        
+
         Ok(())
     }
 
@@ -808,7 +366,7 @@ impl Parser for CJParser {
 
 // Preprocessor -----------------------------------------------------
 fn parse_preprocessor(token: &Token) -> Component {
-    let token = Component::new(token.to_string().replace("\"", ""), None);
+    let token = Component::new(token, None);
     let component = Component::new("Preprocessor", Some(token));
 
     component
@@ -822,6 +380,7 @@ fn parse_iteration(token: &Token) -> Component {
 
     parse_statement(component)
 }
+// ------------------------------------------------------------------
 
 fn parse_jump(token: &Token) -> Component {
     let token = Component::new(token, None);
@@ -920,6 +479,20 @@ fn parse_data_type(token: Component) -> Component {
     parse_declaration(component)
 }
 
+fn parse_using(token: &Token) -> Component {
+    let token = Component::new(token, None);
+    let component = Component::new("Using", Some(token));
+
+    parse_declaration(component)
+}
+
+fn parse_namespace(token: &Token) -> Component {
+    let token = Component::new(token, None);
+    let component = Component::new("Namespace", Some(token));
+
+    parse_declaration(component)
+}
+
 fn parse_declarator(token: &Token) -> Component {
     let token = Component::new(token, None);
     let component = Component::new("Declarator", Some(token));
@@ -955,7 +528,6 @@ fn parse_declaration(token: Component) -> Component {
     component
 }
 // ------------------------------------------------------------------
-
 // Expression -------------------------------------------------------
 fn parse_arithmetic(token: &Token) -> Component {
     let token = Component::new(token, None);
@@ -1016,6 +588,7 @@ fn parse_conditional_operator(token: &Token) -> Component {
 
     parse_expression(token)
 }
+
 // comma operator
 // expression list
 
@@ -1026,7 +599,6 @@ fn parse_comparison(token: &Token) -> Component {
     parse_expression(component)
 }
 
-// TODO: member access
 fn parse_member_access(token: &Token) -> Component {
     let token = Component::new(token, None);
     let component = Component::new("Member Access", Some(token));
@@ -1065,6 +637,19 @@ fn parse_primary_expression(token: Component) -> Component {
 fn parse_allocation(token: &Token) -> Component {
     let token = Component::new(token, None);
     let component = Component::new("Memory Allocation", Some(token));
+
+    parse_expression(component)
+}
+
+fn parse_scope_resolution(token: &Token) -> Component {
+    let token = Component::new(token, None);
+    let component = Component::new("Scope Resolution", Some(token));
+
+    parse_nested_specifier(component)
+}
+
+fn parse_nested_specifier(token: Component) -> Component {
+    let component = Component::new("Nested Specifier", Some(token));
 
     parse_expression(component)
 }
