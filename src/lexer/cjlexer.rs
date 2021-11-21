@@ -1,11 +1,8 @@
-use logos::{Logos, Lexer};
-use serde::{Serialize, Deserialize};
-use std::hash::Hash;
+use crate::prelude::*;
 
 #[derive(Logos, Debug, Clone, Serialize, Deserialize, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[non_exhaustive]
 pub enum Token {
-    // preprocessor
     #[regex(r"#define|#undef|#ifdef|#ifndef|#if|#endif|#else|#elif|#line|#error|#include|#pragma", to_string)]
     Preprocessor(String),
     // statement
@@ -84,16 +81,12 @@ pub enum Token {
     // void
     #[token("void")]
     Void,
-    //declarator
-    #[regex(r"[A-Za-z0-9_]+\[[A-Za-z0-9_, ]*\]")]
-    Array,
-    #[regex(r"[A-Za-z0-9_]+\([A-Za-z0-9_, ]*\)")]
-    Function,
-    #[regex("[A-Za-z_]+[A-Za-z0-9_]*", to_string)]
-    Identifier(String),
-    #[regex(r"\*[A-Za-z_]+[A-Za-z0-9_]*")]
-    Pointer,
-    TypedefName,
+    // declarator
+    // ARRAY
+    // FUNCTION
+    // IDENTIFIER
+    // POINTER
+    // TYPEDEFNAME
     // storage class
     #[token("auto")]
     Auto,
@@ -133,11 +126,14 @@ pub enum Token {
     #[token("-")]
     Minus,
     #[token("*")]
+    Asterisk,
     Multiplication,
+    Pointer,
     #[token("/")]
     Divide,
     #[token("%")]
     Modulo,
+    // assignment
     #[token("+=")]
     AddAssignment,
     #[token("-=")]
@@ -151,15 +147,15 @@ pub enum Token {
     #[token("=")]
     Assignment,
     // bitwise
-    #[token("&")]            // #[regex("-?[0-9]+\\.[0-9]+", priority=2)] // #[regex("[a-zA-Z0-9_]+\s*\&\s*[a-zA-Z0-9_]+")]
+    #[token("&")]
     Ampersand,
     BitwiseAnd,
     Reference,
-    #[token("|")]           // #[regex(r"[a-zA-Z0-9_]+\s*\|\s*[a-zA-Z0-9_]+")]
+    #[token("|")]
     BitwiseOr,
-    #[token("^")]           // #[regex(r#"[a-zA-Z0-9_]+\s*\^\s*[a-zA-Z0-9_]+"#)]
+    #[token("^")]
     BitwiseXor,
-    #[token("~")]           // #[regex(r#"~\s*[a-zA-Z0-9_]+"#)]
+    #[token("~")]
     BitwiseNot,
     #[token("<<")]
     LeftOperator,
@@ -178,30 +174,27 @@ pub enum Token {
     #[token("^=")]
     BitwiseXorAssignment,
     // logical
-    #[token("&&")]          // #[regex(r"[a-zA-Z0-9_]+\s*\&\&\s*[a-zA-Z0-9_]+")]
+    #[token("&&")]
     And,
-    #[token("||")]          // #[regex(r"[a-zA-Z0-9_]+\s*\|\|\s*[a-zA-Z0-9_]+")]
+    #[token("||")]
     Or,
-    #[token("!")]           // #[regex(r"!\s*[a-zA-Z0-9_]+")]
+    #[token("!")]
     Not,
-    #[token("sizeof")]                          // size_of_expression || size_of_type
+    // sizeof
+    #[token("sizeof")]
     SizeOf,
     // initialization
-    #[regex(r"[A-Za-z_]+[A-Za-z0-9_]* *\{")]
-    DesignatedInitializer,
+    // TODO: implement
+    // DesignatedInitializer,
     // EqualsInitialization
     // InitializationList
-    FunctionCall,
+    // FunctionCall
     #[regex(r"const_cast|static_cast|reinterpret_cast")]
     TypeCast,
     #[token("?")]
     ConditionalOperator,
-    // TODO: CommaOperator
-    // TODO: ExpressionList
-    #[token("using")]
-    Using,
-    #[token("namespace")]
-    Namespace,
+    // CommaOperator
+    // ExpressionList
     // comparison
     #[token(">")]
     Greater,
@@ -233,9 +226,6 @@ pub enum Token {
     Decrement,
     PrefixDecrement,
     PostfixDecrement,
-    //primary expression
-    // ----------------------------------
-    
     // memory allocation
     #[token("new")]
     New,
@@ -244,7 +234,7 @@ pub enum Token {
     // scope resolution
     #[token("::")]
     ScopeResolution,
-    
+    // predefined constant
     #[token("true")]
     True,
     #[token("false")]
@@ -252,23 +242,11 @@ pub enum Token {
     #[regex(r"null|Null")]
     Null,
 
-    #[regex(r"[.0-9]+", to_string, priority=11)] // #[regex(r"[0-9]+", priority=2)] // #[regex(r"[.0-9]+", priority=2)]
-    Number(String),
-    #[regex("\"(?s:[^\"\\\\]|\\\\.)*\"", to_string)]
-    StringDoubleQuoted(String),
-    // TODO: Line Comment
-    #[regex(r"//[^\r\n]*(\r\n|\n)?")]
-    #[regex(r"/\*([^*]|\*[^/])*\*/")]
-    Comment,
-    #[error]
-    #[regex(r"[ \t]+", logos::skip)]
-    // #[regex(r"[ \t\n\r]+", logos::skip)]
-    Error,
-
-    #[regex(r"[\n\r]+")]
-    LineBreak,
+    #[token("using")]
+    Using,
+    #[token("namespace")]
+    Namespace,
     // --------------------------------------------------------
-    // Java Parser
     #[token("import")]
     Import,
     #[token("@")]
@@ -313,13 +291,47 @@ pub enum Token {
     Finally,
     #[token("var")]
     Var,
+    // --------------------------------------------------------
+    
+    #[regex("[A-Za-z_]+[A-Za-z0-9_]*", to_string)]
+    Identifier(String),
+    Function,
+    Array,
+
+    #[regex(r"[.0-9]+", to_string)]
+    Number(String),
+    #[token(";")]
+    Semicolon,
+    #[error]
+    #[regex(r"[ \t]+", logos::skip)]
+    Error,
+    #[regex(r"[\n\r]+")]
+    LineBreak,
+    #[token("{")]
+    OpenBrace,
+    #[token("}")]
+    CloseBrace,
+    // find error
+    #[token("(")]
+    OpenParen,
+    #[token(")")]
+    CloseParen,
+    #[token("[")]
+    OpenBracket,
+    #[token("]")]
+    CloseBracket,
+
+    // #[regex(r"[A-Za-z0-9_]+\[[A-Za-z0-9_, ]*\]")]
+    // Array,
+    // #[regex(r"[A-Za-z0-9_]+\([A-Za-z0-9_, ]*\)")]
+    // Function,
+    // #[regex(r"\*[A-Za-z_]+[A-Za-z0-9_]*")]
+    // Pointer,
 }
 
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
-        // or, alternatively:
-        // fmt::Debug::fmt(self, f)
     }
 }
 
