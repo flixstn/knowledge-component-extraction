@@ -1,15 +1,6 @@
-use opencv::{
-    core::{BORDER_DEFAULT, CV_32F, Point, Range, Rect, Scalar, Size, min_max_loc, no_array, subtract}, 
-    dnn::{self, DNN_BACKEND_OPENCV, DNN_TARGET_CPU, Net, nms_boxes, read_net_from_darknet}, 
-    highgui, 
-    imgproc::{COLOR_BGR2GRAY, LINE_8, THRESH_BINARY, cvt_color, gaussian_blur, rectangle, threshold}, 
-    prelude::{Mat, MatTrait, MatTraitManual, NetTrait}, 
-    text::{OCRTesseract, OEM_DEFAULT, PSM_SINGLE_BLOCK}, 
-    types::{VectorOfMat, VectorOfRect, VectorOfString, VectorOff32, VectorOfi32}, 
-    videoio::{self, CAP_PROP_FPS, CAP_PROP_POS_MSEC, VideoCapture, VideoCaptureTrait}
-};
-use std::{error::Error, sync::mpsc::Sender};
-use crate::analyzer::analyzer::Message;
+use crate::prelude::*;
+
+const INVERSE_THRESHOLD: f64 = 127.5;
 
 pub struct Yolo;
 
@@ -77,8 +68,9 @@ impl Yolo {
                     &img, &mut blob, 
                     1./255., 
                     Size::new(inp_width, inp_height), 
-                    Scalar::new(0.,0.,0., 0.), 
-                    false, 
+                    Scalar::new(0.,0.,0., 0.),
+                    // TODO: swap_rb: true seems to yield better results
+                    true,
                     false, 
                     CV_32F
                 )?;
@@ -142,14 +134,17 @@ impl Yolo {
 
                 for num in indices.iter() {
                     let mut bbox = boxes.get(num as usize)?;
-                    bbox.x -= 4;
-                    bbox.y -= 2;
-                    bbox.height += 4;
-                    bbox.width += 8;
+                    // TODO bound box adjustion, might not be necessary depending on detection mAP
+                    // bbox.x -= 4;
+                    // bbox.y -= 2;
+                    // bbox.height += 4;
+                    // bbox.width += 8;
                     
                     // adjust bounding box if coordinates are < 0
-                    if bbox.x < 0 || bbox.y < 0 {
+                    if bbox.x < 0 {
                         bbox.x = 0;
+                    }
+                    if bbox.y < 0 {
                         bbox.y = 0;
                     }
                     
@@ -163,32 +158,34 @@ impl Yolo {
                         0
                     )?;
 
-                    // convert sub image to grayscale
+                    // get sub image and convert to grayscale
                     sub_img = Mat::roi(&img, bbox)?;
                     cvt_color(&sub_img, &mut gray, COLOR_BGR2GRAY, 0)?;
-
-                    // convert mean 
+                    
+                    // convert mean for potential inverting
                     let mean_value = opencv::core::mean(&gray, &no_array()?)?;
-                    // println!("{:?}", mean_value);
 
-                    // TODO: check for zero vector
-                    if *mean_value.get(0).unwrap() <= 127.5 {   // mean_value.get(0).is_some() &&
-                        subtract(&Scalar::all(255.), &gray, &mut src, &no_array()?, -1)?;
+                    if let Some(value) = mean_value.get(0) {
+                        if *value <= INVERSE_THRESHOLD {
+                            subtract(&Scalar::all(255.), &gray, &mut src, &no_array()?, -1)?;
+                        }
                     }
                 }
 
-                // perform OCR on image
-                if !gray.empty()? {
-                    // TODO: change component level to default: 0?
+                if !src.empty()? {
+                    // TODO: check component level to default: 0
                     ocr_output = ocr.run(&src, 0, 1)?;
-                    sender.send((Message::StreamMessage(ocr_output), frame_position));
+                    sender.send((Message::StreamMessage(ocr_output), frame_position))?;
                 }
 
                 // show frame
-                highgui::imshow("image", &src)?;
+                if !src.empty()? {
+                    highgui::imshow("sub_image", &src)?;
+                }
+                // highgui::imshow("image", &img)?;
             }
         }
-        sender.send((Message::EndMessage, 0));
+        sender.send((Message::EndMessage, 0))?;
         Ok(())
     }
 }
