@@ -21,7 +21,7 @@ The main components of this repository are structured as follows:
 * `lexer/`: Implementation of different lexers based on the classifier programming language
 
 * `neural_net/`: Implementation of custom code detection and extraction using retrained
-    `Yolo` and `Tesseract`
+    `NeuralNet` and `Tesseract`
 
 * `parser/`: Implementation of parsing the tokens from the lexer, processing them and recursively build
     the knowledge component tree.
@@ -32,5 +32,5 @@ In order to run the repository following prerequisites are required:
 
 * [OpenCV 4.5](https://opencv.org/) or higher
 
-* [YoutubeDL](https://youtube-dl.org/)
+* [YT-DLP](https://github.com/yt-dlp/yt-dlp)
 
