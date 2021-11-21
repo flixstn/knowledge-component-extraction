@@ -1,10 +1,8 @@
-use logos::{Logos, Lexer};
-use serde::{Serialize, Deserialize};
-use std::hash::Hash;
+use crate::prelude::*;
 
 #[derive(Logos, Debug, Clone, Serialize, Deserialize, Eq, Ord, Hash, PartialEq, PartialOrd)]
 #[non_exhaustive]
-pub enum Token {
+pub enum PyToken {
     // iteration
     #[token("for")]
     #[token("while")]
@@ -173,29 +171,26 @@ pub enum Token {
     #[token("lambda")]
     Lambda,
 
-
     #[regex(r"#[^\r\n]*(\r\n|\n)?")]
     Comment,
     #[error]
     #[regex(r"[ \t\n\r]+", logos::skip)]
     Error,
-
-    
 }
 
-impl std::fmt::Display for Token {
+impl std::fmt::Display for PyToken {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
-impl From<&Token> for String {
-    fn from(token: &Token) -> Self {
+impl From<&PyToken> for String {
+    fn from(token: &PyToken) -> Self {
         token.to_string()
     }
 }
 
-fn to_string(lex: &mut Lexer<Token>) -> Option<String> {
+fn to_string(lex: &mut Lexer<PyToken>) -> Option<String> {
     let slice = lex.slice().to_string();
     Some(slice)
 }
