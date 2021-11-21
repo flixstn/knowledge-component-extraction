@@ -2,10 +2,7 @@ pub(crate) mod cjparser;
 pub(crate) mod pyparser;
 pub(crate) mod knowledge_component;
 
-use indexmap::IndexSet;
-use crate::{classifier::classifier::ProgrammingLanguage, parser::cjparser::CJParser, parser::pyparser::PyParser};
-use std::error::Error;
-use self::knowledge_component::KnowledgeComponent;
+use crate::prelude::*;
 
 // TODO: check implementation std::mem::MaybeUninit for parser
 #[derive(Debug)]
@@ -44,7 +41,6 @@ impl ProtoParser {
                 self.parser = Some(Box::new(parser));
                 self.language = Some(Box::new(ProgrammingLanguage::Python));
             }
-            _ => {}
         }
     }
 

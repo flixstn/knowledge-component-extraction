@@ -1,5 +1,4 @@
-use serde::{Serialize, Deserialize};
-use std::hash::{Hash, Hasher};
+use crate::prelude::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Ord, PartialOrd)]
 pub struct KnowledgeComponent {

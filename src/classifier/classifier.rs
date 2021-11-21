@@ -1,4 +1,4 @@
-use std::{process::Command, str::from_utf8};
+use crate::prelude::*;
 
 // TODO: change to LanguageClassifier(ProgrammingLanguage) and return language to parser
 pub struct LanguageClassifier;
@@ -42,7 +42,7 @@ impl LanguageClassifier {
     }
 
     pub fn classify_ml(val: &str) -> Option<ProgrammingLanguage> {
-        let mut output = Command::new("./src/classifier/classifier").args(&[&format!("{}", val)]).output().unwrap();
+        let output = Command::new("./src/classifier/classifier").args(&[&format!("{}", val)]).output().unwrap();
         let language = from_utf8(&output.stdout).unwrap();
 
         if "c_cpp" == language {
