@@ -1,7 +1,4 @@
-use crate::{classifier::classifier::{LanguageClassifier, ProgrammingLanguage}, neural_net::yolo::Yolo, parser::{ProtoParser, knowledge_component::KnowledgeComponent}};
-use std::{env::current_dir, error::Error, fs::write, process::Command, str::from_utf8, sync::{Arc, Mutex, mpsc::{self, Receiver}}, thread, time::Duration};
-use indexmap::IndexSet;
-use serde::{Serialize, Deserialize};
+use crate::prelude::*;
 
 const CLASSIFICATION_THRESHOLD: usize = 8;
 
@@ -41,13 +38,15 @@ impl VideoAnalyzer {
     }
 
     pub fn download_video(&self) -> Result<(), Box<dyn Error>> {
-        Command::new("youtube-dl").args(&["-f", "best", "-o", &format!("video//{}.mp4", self.video.title), &self.video.url]).output()?;
+        Command::new("yt-dlp")
+            .args(&["-f", "248", "-P", &format!("video//"), "-o", &format!("{}.mp4", self.video.title) , &format!("{}", self.video.url)]).output()?;
+
         Ok(())
     }
 
     pub fn save_result(&self) -> Result<(), Box<dyn Error>> {
         let serialized = serde_json::to_string_pretty(&self)?;
-        std::fs::create_dir("./output");
+        create_dir("./output")?;
         write(format!("./output/{}.json", self.video.title), serialized)?;
         
         Ok(())
@@ -116,13 +115,8 @@ pub struct Video {
 
 impl Video {
     fn new(url: &str) -> Self {
-        let command_output = Command::new("youtube-dl").args(&["--get-title", &url]).output().expect("Error: youtube-dl could not get video title.");
-        let mut video_title = from_utf8(&command_output.stdout).unwrap().to_owned();
+        let video_title = get_video_title(url);
         let path = format!("{}/video/{}.mp4", current_dir().unwrap().display().to_string(), video_title);
-
-        if video_title.ends_with("\n") {
-            video_title.pop();
-        }
 
         Self {
             title: video_title,
@@ -130,4 +124,15 @@ impl Video {
             path: path
         }
     }
+}
+
+fn get_video_title(url: &str) -> String {
+    let command_output = Command::new("yt-dlp").args(&["--print", "title", &format!("{}", url)]).output().expect("Error: youtube-dl could not get video title.");
+    let mut video_title = from_utf8(&command_output.stdout).unwrap().to_owned();
+
+    if video_title.ends_with("\n") {
+        video_title.pop();
+    }
+
+    video_title
 }
